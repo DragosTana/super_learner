@@ -2,13 +2,12 @@ import os
 import numpy as np 
 import pandas as pd 
 import warnings
-import sklearn
 import matplotlib.pyplot as plt
 from sklearn import datasets
 from pandas.plotting import scatter_matrix
-from sklearn.linear_model import LassoCV, RidgeCV, LinearRegression, ElasticNetCV, Ridge
+from sklearn import linear_model
+from sklearn import neighbors
 from sklearn.model_selection import train_test_split
-
 import superLearner as sl
 
 def generate_data(features = 10, n = 1000, plot = True):
@@ -44,28 +43,24 @@ def generate_data(features = 10, n = 1000, plot = True):
     return Y, X
 
 def main():
-    Y, X = generate_data(features = 5, n = 100, plot=False)
+    np.random.seed(100)
+    X, y = datasets.make_friedman1(1000)
     
-    x_train, x_test, y_train, y_test = sklearn.model_selection.train_test_split(X, Y, test_size=0.2)
-
-    lasso = LassoCV(cv=5)
-    ridge = RidgeCV(cv=5)
-    l = LinearRegression()
-    el = ElasticNetCV(cv=5)
+    ols = linear_model.LinearRegression()
+    elastic = linear_model.ElasticNetCV()
+    ridge = linear_model.RidgeCV()
+    lars = linear_model.LarsCV()
+    lasso = linear_model.LassoCV()
+    knn = neighbors.KNeighborsRegressor()
     
-    models = [lasso, ridge, l, el]
+    superLeaner = sl.SuperLearner([ols, elastic, ridge, lars, lasso, knn])
     
-    sl_model = sl.SuperLearner(models)
+    superLeaner.fit(X, y)
+    y_pred = superLeaner.predict(X)
     
-    sl_model.fit(x_train, y_train)
-    y = sl_model.predict(x_test)
+    print(superLeaner.error)
+    print(superLeaner.weights)
     
-    print("R2 sl_model: ", sklearn.metrics.r2_score(y_test, y))
-    print("R2 lasso: ", sklearn.metrics.r2_score(y_test, lasso.fit(x_train, y_train).predict(x_test)))
-    print("R2 ridge: ", sklearn.metrics.r2_score(y_test, ridge.fit(x_train, y_train).predict(x_test)))
-    print("R2 l: ", sklearn.metrics.r2_score(y_test, l.fit(x_train, y_train).predict(x_test)))
-    print("R2 el: ", sklearn.metrics.r2_score(y_test, el.fit(x_train, y_train).predict(x_test)))
-    print("coef: ", sl_model.weights)
     
 if __name__ == "__main__":
     main()
