@@ -141,8 +141,7 @@ def main():
 
     #X, y = datasets.make_friedman1(5000)
     #X, y = datasets.make_friedman2(5000)
-    X, y, coef = datasets.make_regression(n_samples=100, n_features=10, n_informative=5, n_targets=1, bias=0.0, effective_rank=None, tail_strength=0.5, noise=0.0, shuffle=True, coef=True, random_state=12)
-    print(coef)
+    X, y, coef = datasets.make_regression(n_samples=1000, n_features=10, n_informative=5, n_targets=1, bias=0.0, effective_rank=None, tail_strength=0.5, noise=0.0, shuffle=True, coef=True, random_state=12)
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
     scaler = StandardScaler()
@@ -154,11 +153,22 @@ def main():
     
     library = {
         "ols": linear_model.LinearRegression(),
-        "elastic": linear_model.ElasticNet(),
-        "ridge": linear_model.Ridge(),
-        "lars": linear_model.Lars(),
-        "lasso": linear_model.Lasso(),
-        "knn": neighbors.KNeighborsRegressor()
+        "elastic_0.01": linear_model.ElasticNet(alpha=0.01),
+        "elastic_0.1": linear_model.ElasticNet(alpha=0.1),
+        "elastic_1.0": linear_model.ElasticNet(alpha=1.0),
+        "elastic_10.0": linear_model.ElasticNet(alpha=10.0),
+        "ridge_0.01": linear_model.Ridge(alpha=0.01),
+        "ridge_0.1": linear_model.Ridge(alpha=0.1),
+        "ridge_1.0": linear_model.Ridge(alpha=1.0),
+        "ridge_10.0": linear_model.Ridge(alpha=10.0),
+        "lasso_0.01": linear_model.Lasso(alpha=0.01),
+        "lasso_0.1": linear_model.Lasso(alpha=0.1),
+        "lasso_1.0": linear_model.Lasso(alpha=1.0),
+        "lasso_10.0": linear_model.Lasso(alpha=10.0),
+        "knn_5": neighbors.KNeighborsRegressor(n_neighbors=5),
+        "knn_10": neighbors.KNeighborsRegressor(n_neighbors=10),
+        "knn_15": neighbors.KNeighborsRegressor(n_neighbors=15),
+        "knn_20": neighbors.KNeighborsRegressor(n_neighbors=20),
     }
     
     superLeaner1 = SuperLearner(library)
@@ -166,7 +176,7 @@ def main():
     superLeaner1.fit(X_train, y_train)
     y_pred = superLeaner1.predict(X_test)
     
-    superLeaner2 = SuperLearner(library, linear_model.ElasticNetCV(positive=True, alphas=np.arange(0.01, 10.0, 0.01)))
+    superLeaner2 = SuperLearner(library, linear_model.ElasticNetCV(positive=True, alphas=np.arange(0.01, 10.0, 0.01 )))
     superLeaner2.fit(X_train, y_train)
     
     print(" ")
@@ -176,9 +186,11 @@ def main():
     #print("MSE with meta learner: ", metrics.mean_squared_error(y_test, superLeaner2.predict(X_test)))
     print(" ")
     
+    
+    
     for i, estimator in enumerate(superLeaner1.base_estimators):
-        print("R^2 for {name}: {score}".format(name = estimator.__class__.__name__, score = estimator.score(X_test, y_test)))
-        #print("MSE for {name}: {score}".format(name = estimator.__class__.__name__, score = metrics.mean_squared_error(y_test, estimator.predict(X_test))))
+        print("R^2 for {name}: {score}".format(name = list(library.keys())[i], score = estimator.score(X_test, y_test)), )
+        #print("MSE for {name}: {score}".format(name = list(library.keys())[i], score = metrics.mean_squared_error(y_test, estimator.predict(X_test))))
     
     
 if __name__ == "__main__":
