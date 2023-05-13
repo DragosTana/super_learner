@@ -16,13 +16,33 @@ import numpy as np
 import pandas as pd 
 
 class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
+    """
+    Super Learner algorithm for regression and classification tasks.
     
-    def __init__(self, base_estimators, meta_learner = None, threshold = 0.01):
+    base_estimators: dict
+        dictionary of base estimators
+        
+    meta_learner: estimator, default = None
+        meta learner to combine the base estimators' predictions
+        
+    task: {'regression', 'classification'}, default = 'regression'
+        task to perform
+        
+    threshold: float, default = 0.01
+        threshold for the meta learner's coefficients
+        
+    verbose: bool, default = False
+        if True, prints the correlation matrix and scatter matrix of the base estimators' predictions
+    """
+    
+    def __init__(self, base_estimators, meta_learner = None, task = 'regression', threshold = 0.01, verbose = False):
         self.base_estimators = base_estimators.values()
         self.meta_learner = meta_learner
         self.threshold = threshold
         self.weights = None
-    
+        self.verbose = verbose
+        self.task = task
+        
     def fit(self, X, y):
         X, y = check_X_y(X, y)
         
@@ -38,18 +58,22 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
                 estimator.fit(X_train, y_train)
                 meta_predictions[val_idx, j] = estimator.predict(X_val)
                 
-        #df = pd.DataFrame(np.hstack((meta_predictions, y.reshape(-1,1))))
-        #last_column_index = df.shape[1] - 1
-        #df.rename(columns={last_column_index: 'y'}, inplace=True)
-        #names = {i : estimator.__class__.__name__ for i, estimator in enumerate(self.base_estimators)}
-        #df.rename(columns=names, inplace=True)
-        ##print(df.head())
-        #
-        #scatter_matrix(df, alpha = 0.2,  figsize = (6, 6), diagonal = 'kde')
-        #plt.show(block=False)
-        #print(" ")
+        if self.verbose:
+            df = pd.DataFrame(np.hstack((meta_predictions, y.reshape(-1,1))))
+            last_column_index = df.shape[1] - 1
+            df.rename(columns={last_column_index: 'y'}, inplace=True)
+            names = {i : estimator.__class__.__name__ for i, estimator in enumerate(self.base_estimators)}
+            df.rename(columns=names, inplace=True)
+            print(df.head())
+
+            scatter_matrix(df, alpha = 0.2,  figsize = (6, 6), diagonal = 'kde')
+            plt.show(block=False)
+            print(" ")
         
-        self.calculate_weights_regression(meta_predictions, X, y)
+        if self.task == 'regression':
+            self.calculate_weights_regression(meta_predictions, X, y)
+        elif self.task == 'classification':
+            self.calculate_weights_classification(meta_predictions, X, y)
         
         return self
     
@@ -86,7 +110,22 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
         return self
     
     def calculate_weights_classification(self, meta_predictions, X, y):
-        NotImplementedError("Classification not implemented yet")
+
+        accuracies = []
+        for i in range(meta_predictions.shape[1]):
+            y_pred = meta_predictions[:, i]
+            accuracy = metrics.accuracy_score(y, y_pred)
+            accuracies.append(accuracy)
+
+        accuracies = np.array(accuracies)
+        accuracies_normalized = accuracies / np.sum(accuracies)
+        accuracies_normalized[accuracies_normalized < self.threshold] = 0
+        self.weights = accuracies_normalized / np.sum(accuracies_normalized)
+        
+        for estimator in self.base_estimators:
+            estimator.fit(X, y)
+            
+        return self
     
     def predict(self, X):
         check_is_fitted(self, 'meta_learner')
@@ -97,14 +136,13 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
             base_predictions[:, i] = estimator.predict(X)
             
         return np.dot(base_predictions, self.weights)
-
-
+        
 def main():
-    np.random.seed(1)
+
     #X, y = datasets.make_friedman1(5000)
     #X, y = datasets.make_friedman2(5000)
-    X, y, _ = datasets.make_regression(n_samples=500, n_features=10, n_informative=5, n_targets=1, bias=0.0, effective_rank=None, tail_strength=0.5, noise=0.0, shuffle=True, coef=True, random_state=None)
-    
+    X, y, coef = datasets.make_regression(n_samples=100, n_features=10, n_informative=5, n_targets=1, bias=0.0, effective_rank=None, tail_strength=0.5, noise=0.0, shuffle=True, coef=True, random_state=12)
+    print(coef)
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
     scaler = StandardScaler()
