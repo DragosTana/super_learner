@@ -17,9 +17,10 @@ import pandas as pd
 
 class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
     
-    def __init__(self, base_estimators, meta_learner = None):
+    def __init__(self, base_estimators, meta_learner = None, threshold = 0.01):
         self.base_estimators = base_estimators.values()
         self.meta_learner = meta_learner
+        self.threshold = threshold
         self.weights = None
     
     def fit(self, X, y):
@@ -48,12 +49,20 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
         #plt.show(block=False)
         #print(" ")
         
+        self.calculate_weights_regression(meta_predictions, X, y)
+        
+        return self
+    
+    def calculate_weights_regression(self, meta_predictions, X, y):
+        
         if self.meta_learner is None:
             scaler = StandardScaler()
             X_scaled = scaler.fit_transform(meta_predictions)
             y_scaled = scaler.fit_transform(y.reshape(-1,1)).flatten()
             result = optimize.nnls(X_scaled, y_scaled)
             result = result[0]
+            result = result / np.sum(result)
+            result[result < self.threshold] = 0
             result = result / np.sum(result)
             self.weights = result
             print(result, np.sum(result))
@@ -65,14 +74,19 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
             self.meta_learner.fit(X_scaled, y_scaled)
             result = self.meta_learner.coef_
             result = result / np.sum(result)
+            result[result < self.threshold] = 0
+            result = result / np.sum(result)
             self.weights = result
             print(result, np.sum(result))
             print(" ")
         
         for estimator in self.base_estimators:
             estimator.fit(X, y)
-        
+            
         return self
+    
+    def calculate_weights_classification(self, meta_predictions, X, y):
+        NotImplementedError("Classification not implemented yet")
     
     def predict(self, X):
         check_is_fitted(self, 'meta_learner')
@@ -84,45 +98,13 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
             
         return np.dot(base_predictions, self.weights)
 
-def generate_data(features = 10, n = 1000, plot = False):
-    
-    #parameters 
-    beta = np.random.uniform(-20, 20, size = features).astype(int)
-    size = n
-    
-    #generate covariance matrix 
-    mean = np.random.uniform(-5, 5, size = features).astype(int)
-    cov = datasets.make_spd_matrix(features, random_state=1)
-                
-    #data generating process
-    X = np.random.multivariate_normal(mean, cov, size=size)
-    
-    if plot:
-        #transforming data to pandas dataframe and plotting correlation matrix and scatter matrix
-        df = pd.DataFrame(X, columns = ["X{i}".format(i=i) for i in range(1, features+1)])
-        f = plt.figure()
-        plt.matshow(df.corr(), fignum=f.number, cmap='coolwarm')
-        plt.xticks(range(df.select_dtypes(['number']).shape[1]), df.select_dtypes(['number']).columns, fontsize=14, rotation=45)
-        plt.yticks(range(df.select_dtypes(['number']).shape[1]), df.select_dtypes(['number']).columns, fontsize=14)
-        cb = plt.colorbar()
-        cb.ax.tick_params(labelsize=14)
-        plt.title('Correlation Matrix', fontsize=16)
-
-        scatter_matrix(df, alpha = 0.2,  figsize = (6, 6), diagonal = 'kde')
-
-        plt.show()
-    
-    Y = np.dot(X, beta) + np.random.normal(0, 40, size = n)
-
-    return X, Y
 
 def main():
-    
     np.random.seed(1)
     #X, y = datasets.make_friedman1(5000)
     #X, y = datasets.make_friedman2(5000)
-    #X, y = generate_data(features = 50, n = 1000, plot = False)
-    X, y = datasets.make_regression(n_samples=1000, n_features=10, n_informative=5, n_targets=1, bias=0.0, effective_rank=None, tail_strength=0.5, noise=0.0, shuffle=True, coef=False, random_state=None)
+    X, y, _ = datasets.make_regression(n_samples=500, n_features=10, n_informative=5, n_targets=1, bias=0.0, effective_rank=None, tail_strength=0.5, noise=0.0, shuffle=True, coef=True, random_state=None)
+    
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
     scaler = StandardScaler()
@@ -159,8 +141,7 @@ def main():
     for i, estimator in enumerate(superLeaner1.base_estimators):
         print("R^2 for {name}: {score}".format(name = estimator.__class__.__name__, score = estimator.score(X_test, y_test)))
         #print("MSE for {name}: {score}".format(name = estimator.__class__.__name__, score = metrics.mean_squared_error(y_test, estimator.predict(X_test))))
-        
-    #pause = input("Press the <ENTER> key to stop execution...")
+    
     
 if __name__ == "__main__":
     main()
