@@ -1,6 +1,24 @@
-
-
+from scipy import stats
 import numpy as np
+import csv
+
+def load_csv(file_name):
+    data = []
+    with open(file_name, 'r') as csv_file:
+        csv_reader = csv.reader(csv_file)
+        for line in csv_reader:
+            point = []
+            for word in line:
+                point.append(float(word))
+            data.append(point)
+    return np.array(data)
+
+def calculate_mean_ci(data):
+    n = len(data)
+    mean = np.mean(data)
+    std_error = stats.sem(data)
+    confidence_interval = std_error * stats.t.ppf((1 + 0.95) / 2, n - 1)
+    return mean, confidence_interval
 
 def make_regression_fixed_coeffs(n_samples, n_features, coefficients, noise=0.0, random_state=None):
     """
