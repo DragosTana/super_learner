@@ -20,9 +20,9 @@ import time
 
 class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
     """
-    Super Learner algorithm for regression and classification tasks.
+    Parallel Super Learner algorithm for regression and classification tasks.
     
-    ##Parameters:
+    ## Parameters:
     
     base_estimators: dict
         dictionary of base estimators
@@ -40,7 +40,6 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
         if True, prints the correlation matrix and scatter matrix of the base estimators' predictions
         
     ## Attributes:
-
     """
     
     def __init__(self, base_estimators, meta_learner = None, task = 'regression', threshold = 0.01, verbose = False):
