@@ -14,11 +14,11 @@ def dataVisualization(estimators, sample_sizes):
         
     # Plotting the line plot
     for model_idx in range(num_models):
-        plt.plot(sample_sizes, mean_mses[model_idx, :], label='Model {}'.format(estimators[model_idx]))
+        plt.plot(sample_sizes, mean_mses[model_idx, :],linewidth = 3, label='Model {}'.format(estimators[model_idx]))
 
     plt.xlabel('Sample Size')
-    plt.ylabel('Mean Squared Error (MSE)')
-    plt.title('Performance Trend: MSE vs Sample Size')
+    plt.ylabel("R2")
+    plt.title('Performance Trend: R2 vs Sample Size')
     plt.legend()
     plt.show()
 

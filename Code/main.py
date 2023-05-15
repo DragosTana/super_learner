@@ -23,15 +23,20 @@ def montecarlo():
     
     # Parameters for the simulation: sim = number of simulations, n = sample size, beta = true coefficients
     sim = 100
-    beta = np.random.randint(low = -100, high = 100, size = 10)
+    beta = np.random.randint(low = -20, high = 20, size = 10)
+    #random set some beta to 0
+    beta = np.where(np.random.randint(low = 0, high = 2, size = 10) == 0, 0, beta)
+    print(beta)
     
     # Library of base estimators
     library = {
         "osl": linear_model.LinearRegression(),
-        "ridge": linear_model.Ridge(alpha=0.5),
-        "lasso": linear_model.Lasso(alpha=0.5),
-        "enet": linear_model.ElasticNet(alpha=0.5),
-        "knn": neighbors.KNeighborsRegressor(n_neighbors=5),
+        "ridge": linear_model.RidgeCV(alphas=np.arange(0.1, 5, 0.1)),
+        "lasso": linear_model.LassoCV(alphas=np.arange(0.1, 5, 0.1)),
+        "enet": linear_model.ElasticNetCV(alphas=np.arange(0.1, 5, 0.1), l1_ratio=np.arange(0.1, 1, 0.1)),
+        "knn_5": neighbors.KNeighborsRegressor(n_neighbors=5),
+        "knn_10": neighbors.KNeighborsRegressor(n_neighbors=10),
+        "knn_15": neighbors.KNeighborsRegressor(n_neighbors=15),
     }
     
     # Initialize the error matrix
@@ -42,9 +47,10 @@ def montecarlo():
     for n in sample_sizes:
     
         for i in tqdm.tqdm(range(sim), desc="Simulation with {n} samples... ".format(n=n)):
-            np.random.seed(2)
-            X, y = ms.make_regression_fixed_coeffs(n_samples = n, n_features = len(beta), coefficients = beta, noise = 10)
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=2)
+            X, y = ms.make_regression_fixed_coeffs(n_samples = n, n_features = len(beta), coefficients = beta, noise = 20)
+            #X, y = datasets.make_regression(n_samples = n, n_features = len(beta), noise = 30, random_state=2)
+            #X, y = datasets.make_friedman1(n)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
             
             scaler = StandardScaler()
             X_train = scaler.fit_transform(X_train)
