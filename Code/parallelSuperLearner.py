@@ -1,4 +1,3 @@
-#Autor: Dragos Tanasa
 from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 from sklearn.utils.estimator_checks import check_estimator
@@ -11,14 +10,13 @@ from sklearn import neighbors
 from sklearn import datasets
 from sklearn import metrics
 from scipy import optimize
+from joblib import Parallel, delayed
 from pandas.plotting import scatter_matrix
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd 
 import time
-
-import parallelSuperLearner as psl
 
 class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
     """
@@ -55,23 +53,30 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
         self.meta_predictions = None
         
     def fit(self, X, y):
+        
         X, y = check_X_y(X, y)
         
         meta_predictions = np.zeros((X.shape[0], len(self.base_estimators)), dtype=np.float64)
-        #TODO: modify the number of folds depending on the number of base estimators and the size of the dataset
-        kf = KFold(n_splits=5)        
+        kf = KFold(n_splits=5)
+        
+        def fit_estimator(estimator, X_train, y_train, X_val, val_idx, j):
+            estimator.fit(X_train, y_train)
+            return estimator.predict(X_val), val_idx, j
         
         #start_time = time.time()
-    
-        for i, (tran_idx, val_idx) in enumerate(kf.split(X)):
-            
-            X_train, X_val = X[tran_idx], X[val_idx]
-            y_train, y_val = y[tran_idx], y[val_idx]
-            for j, estimator in enumerate(self.base_estimators):
-                estimator.fit(X_train, y_train)
-                meta_predictions[val_idx, j] = estimator.predict(X_val)
+        
+        results = Parallel(n_jobs=-1)(
+            delayed(fit_estimator)(
+                estimator, X[tran_idx], y[tran_idx], X[val_idx], val_idx, j
+            )
+            for i, (tran_idx, val_idx) in enumerate(kf.split(X))
+            for j, estimator in enumerate(self.base_estimators)
+        )
+        
+        for result in results:
+            meta_predictions[result[1], result[2]] = result[0]
                
-        #end_time =  time.time()
+        #end_time = time.time()
         
         #print("Time elapsed: ", end_time - start_time)
         self.meta_predictions = meta_predictions
@@ -122,9 +127,13 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
             print(result, np.sum(result))
             print(" ")
         
-        for estimator in self.base_estimators:
+        def fit_estimator(estimator, X, y):
             estimator.fit(X, y)
             
+        Parallel(n_jobs=-1)(
+            delayed(fit_estimator)(estimator, X, y)
+            for estimator in self.base_estimators)
+        
         return self
     
     def calculate_weights_classification(self, meta_predictions, X, y):
@@ -191,29 +200,31 @@ def main():
     
     library2 = {
         "ols": linear_model.LinearRegression(),
-        "ridge": linear_model.RidgeCV(alphas=np.arange(0.01, 10.0, 0.01)),
+        "ridge": linear_model.Ridge(),
         "lasse" : linear_model.LassoCV(alphas=np.arange(0.01, 10.0, 0.01), positive=True),
-        "elastic" :  linear_model.ElasticNetCV(alphas=np.arange(0.01, 10.0, 0.01), positive=True),
-        "knn_5": neighbors.KNeighborsRegressor(n_neighbors=5),
-        "knn_10": neighbors.KNeighborsRegressor(n_neighbors=10),
-        "knn_15": neighbors.KNeighborsRegressor(n_neighbors=15),
-        "knn_20": neighbors.KNeighborsRegressor(n_neighbors=20),
+        "elastic" :  linear_model.ElasticNet(),
+        "knn" : neighbors.KNeighborsRegressor()
     }
         
-    parallel_sl = psl.SuperLearner(library2, meta_learner=linear_model.ElasticNetCV(alphas=np.arange(0.01, 10.0, 0.01), positive=True))
-    sl = SuperLearner(library2, meta_learner=linear_model.ElasticNetCV(alphas=np.arange(0.01, 10.0, 0.01), positive=True))
-    start_time = time.time()
-    parallel_sl.fit(X_train, y_train)
-    end_time = time.time()
-    print("Parallel Super Learner took: ", end_time - start_time)
+    superLeaner1 = SuperLearner(library2)
     
-    start_time = time.time()
-    sl.fit(X_train, y_train)
-    end_time = time.time()
-    print("Super Learner took: ", end_time - start_time)
+    superLeaner1.fit(X_train, y_train)
+    y_pred = superLeaner1.predict(X_test)
     
-    if (parallel_sl.meta_predictions == sl.meta_predictions).all():
-        print("Meta predictions are equal")
-        
+    superLeaner2 = SuperLearner(library2, linear_model.ElasticNetCV(positive=True, alphas=np.arange(0.01, 10.0, 0.01 )), verbose=True)
+    superLeaner2.fit(X_train, y_train)
+    
+    print(" ")
+    print("R^2 without meta learner: ", superLeaner1.score(X_test, y_test))
+    print("R^2 with meta learner: ", superLeaner2.score(X_test, y_test))
+    #print("MSE without meta learner: ", metrics.mean_squared_error(y_test, y_pred))
+    #print("MSE with meta learner: ", metrics.mean_squared_error(y_test, superLeaner2.predict(X_test)))
+    print(" ")
+    
+    for i, estimator in enumerate(superLeaner1.base_estimators):
+        print("R^2 for {name}: {score}".format(name = list(library1.keys())[i], score = estimator.score(X_test, y_test)), )
+        #print("MSE for {name}: {score}".format(name = list(library.keys())[i], score = metrics.mean_squared_error(y_test, estimator.predict(X_test))))
+    
+    pause = input("Press enter to continue")
 if __name__ == "__main__":
     main()
