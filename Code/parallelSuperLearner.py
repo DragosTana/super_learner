@@ -111,8 +111,6 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
             result[result < self.threshold] = 0
             result = result / np.sum(result)
             self.weights = result
-            print(result, np.sum(result))
-            print(" ")
         else :
             scaler = StandardScaler()
             X_scaled = scaler.fit_transform(meta_predictions)
@@ -123,8 +121,6 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
             result[result < self.threshold] = 0
             result = result / np.sum(result)
             self.weights = result
-            print(result, np.sum(result))
-            print(" ")
         
         def fit_estimator(estimator, X, y):
             estimator.fit(X, y)
@@ -205,6 +201,5 @@ def main():
         "knn" : neighbors.KNeighborsRegressor()
     }
         
-    
 if __name__ == "__main__":
     main()

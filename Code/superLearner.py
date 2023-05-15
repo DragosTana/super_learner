@@ -21,6 +21,7 @@ import time
 import parallelSuperLearner as psl
 
 class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
+    
     """
     Super Learner algorithm for regression and classification tasks.
     
@@ -156,12 +157,22 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
             base_predictions[:, i] = estimator.predict(X)
             
         return np.dot(base_predictions, self.weights)
+    
+def matrix_distance(matrix1, matrix2):
+    array1 = np.array(matrix1)
+    array2 = np.array(matrix2)
+    difference = array1 - array2
+    squared_difference = difference**2
+    sum_squared_difference = np.sum(squared_difference)
+    distance = np.sqrt(sum_squared_difference)
+    
+    return distance
         
 def main():
 
     #X, y = datasets.make_friedman1(5000)
     #X, y = datasets.make_friedman2(5000)
-    X, y, coef = datasets.make_regression(n_samples=1000, n_features=10, n_informative=5, n_targets=1, bias=0.0, effective_rank=None, tail_strength=0.5, noise=0.0, shuffle=True, coef=True, random_state=12)
+    X, y, coef = datasets.make_regression(n_samples=5000, n_features=10, n_informative=5, n_targets=1, bias=0.0, effective_rank=None, tail_strength=0.5, noise=0.0, shuffle=True, coef=True, random_state=12)
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
     scaler = StandardScaler()
@@ -216,6 +227,11 @@ def main():
     
     if (parallel_sl.meta_predictions == sl.meta_predictions).all():
         print("Meta predictions are equal")
+    else:
+        #If the meta predictions are not equal, print the distance between the two matrices. 
+        #The distance should be very small, but not necessarily zero due to floating point errors
+        print("Meta predictions are not equal")
+        print("Distance between meta predictions: ", matrix_distance(parallel_sl.meta_predictions, sl.meta_predictions))
         
 if __name__ == "__main__":
     main()
