@@ -22,7 +22,7 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
     """
     Super Learner algorithm for regression and classification tasks.
     
-    Parameters:
+    ##Parameters:
     
     base_estimators: dict
         dictionary of base estimators
@@ -39,7 +39,7 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
     verbose: bool, default = False
         if True, prints the correlation matrix and scatter matrix of the base estimators' predictions
         
-    Attributes:
+    ## Attributes:
 
     """
     
@@ -206,25 +206,6 @@ def main():
         "knn" : neighbors.KNeighborsRegressor()
     }
         
-    superLeaner1 = SuperLearner(library2)
     
-    superLeaner1.fit(X_train, y_train)
-    y_pred = superLeaner1.predict(X_test)
-    
-    superLeaner2 = SuperLearner(library2, linear_model.ElasticNetCV(positive=True, alphas=np.arange(0.01, 10.0, 0.01 )), verbose=True)
-    superLeaner2.fit(X_train, y_train)
-    
-    print(" ")
-    print("R^2 without meta learner: ", superLeaner1.score(X_test, y_test))
-    print("R^2 with meta learner: ", superLeaner2.score(X_test, y_test))
-    #print("MSE without meta learner: ", metrics.mean_squared_error(y_test, y_pred))
-    #print("MSE with meta learner: ", metrics.mean_squared_error(y_test, superLeaner2.predict(X_test)))
-    print(" ")
-    
-    for i, estimator in enumerate(superLeaner1.base_estimators):
-        print("R^2 for {name}: {score}".format(name = list(library1.keys())[i], score = estimator.score(X_test, y_test)), )
-        #print("MSE for {name}: {score}".format(name = list(library.keys())[i], score = metrics.mean_squared_error(y_test, estimator.predict(X_test))))
-    
-    pause = input("Press enter to continue")
 if __name__ == "__main__":
     main()

@@ -24,7 +24,7 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
     """
     Super Learner algorithm for regression and classification tasks.
     
-    Parameters:
+    ## Parameters:
     
     base_estimators: dict
         dictionary of base estimators
@@ -41,7 +41,7 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
     verbose: bool, default = False
         if True, prints the correlation matrix and scatter matrix of the base estimators' predictions
         
-    Attributes:
+    ## Attributes:
 
     """
     
@@ -107,6 +107,7 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
             result[result < self.threshold] = 0
             result = result / np.sum(result)
             self.weights = result
+            print(" ")
             print(result, np.sum(result))
             print(" ")
         else :
@@ -119,6 +120,7 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
             result[result < self.threshold] = 0
             result = result / np.sum(result)
             self.weights = result
+            print(" ")
             print(result, np.sum(result))
             print(" ")
         
