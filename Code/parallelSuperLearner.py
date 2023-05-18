@@ -160,7 +160,7 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
         return np.dot(base_predictions, self.weights)
         
 def main():
-
+    
     X, y = datasets.make_friedman1(5000)
     #X, y = datasets.make_friedman2(5000)
     #X, y, coef = datasets.make_regression(n_samples=1000, n_features=10, n_informative=5, n_targets=1, bias=0.0, effective_rank=None, tail_strength=0.5, noise=0.0, shuffle=True, coef=True, random_state=12)
@@ -203,3 +203,4 @@ def main():
         
 if __name__ == "__main__":
     main()
+    
