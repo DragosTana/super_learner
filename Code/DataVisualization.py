@@ -61,14 +61,24 @@ def speedUpVisual():
     # Show the plot
     plt.show()
     
+def weightsVisual(path):
+    df = pd.read_csv(path)
+    averages = df.mean()
+    std_devs = df.std()
+    conf_ints = 1.96 * std_devs / np.sqrt(len(df))  
+    plt.bar(averages.index, averages.values, yerr=conf_ints, capsize=4, color='green')
+
+    plt.title('Average Values with Confidence Intervals')
+    plt.xlabel('Base Estimators')
+    plt.ylabel('Average Values')
+    plt.show()
+    
 
 if __name__ == "__main__":
-    #df = pd.read_csv("Data/R2_at_100.csv")
-    #estimators = df.columns
-    #sample_sizes = [100, 200, 500, 1000, 5000, 10000]
-    #dataVisualization(estimators, sample_sizes)
+    path = "Data/sl_scores.csv"
+    weightsVisual(path)
 
-    speedUpVisual()
+
     
     
     
