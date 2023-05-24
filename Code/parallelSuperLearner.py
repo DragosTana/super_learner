@@ -43,28 +43,28 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
     ## Attributes:
     """
     
-    def __init__(self, base_estimators, meta_learner = None, task = 'regression', threshold = 0.01, verbose = False):
+    def __init__(self, base_estimators, folds = 10,  meta_learner = None, task = 'regression', threshold = 0.01, verbose = False):
         self.base_estimators = base_estimators.values()
         self.base_estimators_names = base_estimators.keys()
         self.meta_learner = meta_learner
+        self.folds = folds
         self.threshold = threshold
         self.weights = None
         self.verbose = verbose
         self.task = task
         self.meta_predictions = None
         
+        
     def fit(self, X, y):
         
         X, y = check_X_y(X, y)
         
         meta_predictions = np.zeros((X.shape[0], len(self.base_estimators)), dtype=np.float64)
-        kf = KFold(n_splits=10)
+        kf = KFold(n_splits=self.folds)
         
         def fit_estimator(estimator, X_train, y_train, X_val, val_idx, j):
             estimator.fit(X_train, y_train)
             return estimator.predict(X_val), val_idx, j
-        
-        #start_time = time.time()
         
         results = Parallel(n_jobs=-1)(
             delayed(fit_estimator)(
@@ -77,11 +77,21 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
         for result in results:
             meta_predictions[result[1], result[2]] = result[0]
                
-        #end_time = time.time()
-        
-        #print("Time elapsed: ", end_time - start_time)
+        #def train_and_predict(estimator, X_train, y_train, X_val, val_idx):
+        #    estimator.fit(X_train, y_train)
+        #    return estimator.predict(X_val), val_idx
+        #
+        #results = Parallel(n_jobs=-1)(
+        #    delayed(train_and_predict)(estimator, X[tran_idx], y[tran_idx], X[val_idx], val_idx) 
+        #    for tran_idx, val_idx in kf.split(X)
+        #    for estimator in self.base_estimators
+        #)
+        #
+        #for meta_pred, val_idx in results:
+        #    meta_predictions[val_idx] = meta_pred
+
         self.meta_predictions = meta_predictions
-        
+
         if self.verbose:
             df = pd.DataFrame(np.hstack((meta_predictions, y.reshape(-1,1))))
             last_column_index = df.shape[1] - 1

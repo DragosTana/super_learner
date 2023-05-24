@@ -26,40 +26,23 @@ def dataVisualization(estimators, sample_sizes):
     plt.show()
 
 def speedUpVisual():
-    times_psl = np.loadtxt("times_psl.csv", delimiter=",")
-    times_sl = np.loadtxt("times_sl.csv", delimiter=",")
+    times_psl = np.loadtxt("times_par.csv", delimiter=",")
+    times_sl = np.loadtxt("times_seq.csv", delimiter=",")
     
-    sample = [100, 200, 500, 1000, 2000, 5000, 7500, 10000]
-    lib_size = [5, 10, 20, 50, 80, 100]
+    speeup = times_sl / times_psl
     
-    X, Y = np.meshgrid(sample, lib_size)
+    sample = [100, 500, 1000, 5000, 7500, 10000]
+    lib_size = [5, 10, 15, 20, 24]
     
-    z = times_sl / times_psl
     
-    X = X.flatten()
-    Y = Y.flatten()
-    Z = np.array(z).flatten()
-    
-    # Create triangulation
-    tri = Triangulation(X, Y)
-
-    # Create figure and 3D axis
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    # Plot the surface
-    ax.plot_trisurf(X, Y, Z, triangles=tri.triangles, cmap="viridis", edgecolor="none")
-    sm = ScalarMappable(cmap='viridis')
-    sm.set_array(Z)
-    fig.colorbar(sm)
-    ax.legend()
-    ax.set_xlabel('Sample Size')
-    ax.set_ylabel('Library Size')
-    ax.set_zlabel('Speed Up')
-    ax.set_title('Speed Up vs Sample Size and Library Size')
-
-    # Show the plot
+    for l in range(len(lib_size)):
+        plt.plot(sample, speeup[:, l], linewidth = 3, label='{}'.format(lib_size[l]))
+    plt.xlabel('Sample Size')
+    plt.ylabel("SpeedUp")
+    plt.title('Performance Trend: SpeedUp vs Sample Size')
+    plt.legend()
     plt.show()
+    
     
 def weightsVisual(path):
     df = pd.read_csv(path)
@@ -75,8 +58,7 @@ def weightsVisual(path):
     
 
 if __name__ == "__main__":
-    path = "Data/sl_scores.csv"
-    weightsVisual(path)
+    speedUpVisual()
 
 
     

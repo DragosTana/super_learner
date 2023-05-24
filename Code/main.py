@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd 
 import tqdm
 import time
+import random
 
 import misc as ms
 import parallelSuperLearner as psl
@@ -120,86 +121,116 @@ def montecarloOptimization():
         sl1.fit(X_train, y_train)
         sl2.fit(X_train, y_train)
         
-        #iteration_score = []
-        #for estimator in library:
-        #    library[estimator].fit(X_train, y_train)
-        #    s = library[estimator].score(X_test, y_test)
-        #    iteration_score.append(s)
-        #
-        #weigths_meta.append(sl1.weights)
-        #weigths_opt.append(sl2.weights)
-        #scores.append(iteration_score)    
+        iteration_score = []
+        for estimator in library:
+            library[estimator].fit(X_train, y_train)
+            s = library[estimator].score(X_test, y_test)
+            iteration_score.append(s)
+        
+        weigths_meta.append(sl1.weights)
+        weigths_opt.append(sl2.weights)
+        scores.append(iteration_score)    
         sl_scores.append([sl1.score(X_test, y_test), sl2.score(X_test, y_test)])
         
-    #weigths_meta = np.array(weigths_meta)
-    #weigths_opt = np.array(weigths_opt)
-    #scores = np.array(scores)
+    weigths_meta = np.array(weigths_meta)
+    weigths_opt = np.array(weigths_opt)
+    scores = np.array(scores)
     sl_scores = np.array(sl_scores)
     
-    #pd_meta = pd.DataFrame(weigths_meta, columns=list(library.keys()))
-    #pd_opt = pd.DataFrame(weigths_opt, columns=list(library.keys()))
-    #pd_score = pd.DataFrame(scores, columns=list(library.keys()))
+    pd_meta = pd.DataFrame(weigths_meta, columns=list(library.keys()))
+    pd_opt = pd.DataFrame(weigths_opt, columns=list(library.keys()))
+    pd_score = pd.DataFrame(scores, columns=list(library.keys()))
     pd_sl_score = pd.DataFrame(sl_scores, columns=["meta", "opt"])
     
-    #pd_meta.to_csv(path + "/Data/weights_meta.csv", index=False)
-    #pd_opt.to_csv(path + "/Data/weights_opt.csv", index=False)
-    #pd_score.to_csv(path + "/Data/scores.csv", index=False)
+    pd_meta.to_csv(path + "/Data/weights_meta.csv", index=False)
+    pd_opt.to_csv(path + "/Data/weights_opt.csv", index=False)
+    pd_score.to_csv(path + "/Data/scores.csv", index=False)
     pd_sl_score.to_csv(path + "/Data/sl_scores.csv", index=False)
+    
+def timeTest(type, sample, lib_size):
+    
+    times = np.zeros((len(sample), len(lib_size)))
+    
+    lib = {}
+    for i in range(len(sample)):
+        
+        for j in range(len(lib_size)):
+            
+            # Create the library
+            library1 = {
+                "ols": linear_model.LinearRegression(),
+                "elastic_0.01": linear_model.ElasticNet(alpha=0.01),
+                "elastic_0.1": linear_model.ElasticNet(alpha=0.1),
+                "elastic_1.0": linear_model.ElasticNet(alpha=1.0),
+                "elastic_5.0": linear_model.ElasticNet(alpha=5.0),
+                "elastic_10.0": linear_model.ElasticNet(alpha=10.0),
+                "elastic_15": linear_model.ElasticNet(alpha=15),
+                "ridge_0.01": linear_model.Ridge(alpha=0.01),
+                "ridge_0.1": linear_model.Ridge(alpha=0.1),
+                "ridge_1.0": linear_model.Ridge(alpha=1.0),
+                "ridge_5.0": linear_model.Ridge(alpha=5.0),
+                "ridge_10.0": linear_model.Ridge(alpha=10.0),
+                "ridge_15": linear_model.Ridge(alpha=15),
+                "lasso_0.01": linear_model.Lasso(alpha=0.01),
+                "lasso_0.1": linear_model.Lasso(alpha=0.1),
+                "lasso_1.0": linear_model.Lasso(alpha=1.0),
+                "lasso_5.0": linear_model.Lasso(alpha=5.0),
+                "lasso_10.0": linear_model.Lasso(alpha=10.0),
+                "lasso_15": linear_model.Lasso(alpha=15),
+                "knn_5": neighbors.KNeighborsRegressor(n_neighbors=5),
+                "knn_10": neighbors.KNeighborsRegressor(n_neighbors=10),
+                "knn_15": neighbors.KNeighborsRegressor(n_neighbors=15),
+                "knn_20": neighbors.KNeighborsRegressor(n_neighbors=20),
+                "knn_25": neighbors.KNeighborsRegressor(n_neighbors=25),
+                "knn_30": neighbors.KNeighborsRegressor(n_neighbors=30),
+                }       
+            
+            #select j random estimators
+            casuale = random.sample(list(library1.keys()), lib_size[j])
+            lib = {k: library1[k] for k in casuale}
+            
+            
+            # Initialize the learner
+            if type == "sequential":
+                learner = sl.SuperLearner(lib)
+            if type == "parallel":
+                learner = psl.SuperLearner(lib)
+            
+            # Generate dataset
+            beta = np.random.randint(low = -20, high = 20, size = 10)
+            X, y = ms.make_regression_fixed_coeffs(n_samples = sample[i], n_features = 10, coefficients = beta, noise = 10)
+            
+            start_time = time.time()
+            learner.fit(X, y)
+            end_time = time.time()
+            
+            times[i, j] = end_time - start_time
+            
+            library1.clear()
+    
+    return times
     
 def speedUp():
     
-    sample = [100, 200, 500, 1000, 2000, 5000, 7500, 10000]
-    lib_size = [5, 10, 20, 50, 80, 100]
+    sample = [100, 500, 1000, 5000, 7500, 10000]
+    lib_size = [5, 10, 15, 20, 24]
     
-    times_sl = np.zeros((len(sample), len(lib_size)))
-    times_psl = np.zeros((len(sample), len(lib_size)))
-    beta = np.random.randint(low = -20, high = 20, size = 10)
-
-    library = {}
+    times_seq = np.zeros((len(sample), len(lib_size)))
+    times_par = np.zeros((len(sample), len(lib_size)))
     
+    for i in tqdm.tqdm(range(5)):
+        times_seq =+ timeTest("sequential", sample, lib_size)
 
-    for j in tqdm.tqdm(range(len(lib_size))):
+    times_seq = times_seq / 5
+    
+    for j in tqdm.tqdm(range(5)):
+        times_par =+ timeTest("parallel", sample, lib_size)
         
-        library.clear()
-        #creaiamo la libreria
-        for q in range(lib_size[j]):
-            library["ols_{}".format(q)] = linear_model.LinearRegression()
-            
-        for i in range(len(sample)):
-            
-            sl1 = sl.SuperLearner(library)
-            psl1 = psl.SuperLearner(library)
-            mean_time_sl = 0
-            mean_time_psl = 0
-            
-            for t in range(10):
-                #creiamo il dataset
-                X, y = ms.make_regression_fixed_coeffs(n_samples = sample[i], n_features = len(beta), coefficients = beta, noise = 10)
-                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
-                scaler = StandardScaler()
-                X_train = scaler.fit_transform(X_train)
-                X_test = scaler.fit_transform(X_test)
-                y_train = scaler.fit_transform(y_train.reshape(-1,1)).flatten()
-                y_test = scaler.fit_transform(y_test.reshape(-1,1)).flatten()
-                
-                start_time = time.time()
-                sl1.fit(X_train, y_train)
-                endtime = time.time()
-                mean_time_sl += endtime - start_time
-                
-                start_time = time.time()
-                psl1.fit(X_train, y_train)
-                endtime = time.time()
-                mean_time_psl += endtime - start_time
-                
-            times_sl[i, j] = mean_time_sl / 10
-            times_psl[i, j] = mean_time_psl / 10
+    times_par = times_par / 5
     
-    np.savetxt("times_sl.csv", times_sl, delimiter=",")
-    np.savetxt("times_psl.csv", times_psl, delimiter=",")
+    np.savetxt("times_seq.csv", times_seq, delimiter=",")
+    np.savetxt("times_par.csv", times_par, delimiter=",")
     
-    speed_up = times_sl / times_psl
-    print(speed_up)
                     
 if __name__ == "__main__":
-    montecarloOptimization()
+    speedUp()

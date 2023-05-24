@@ -59,11 +59,8 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
         X, y = check_X_y(X, y)
         
         meta_predictions = np.zeros((X.shape[0], len(self.base_estimators)), dtype=np.float64)
-        #TODO: modify the number of folds depending on the number of base estimators and the size of the dataset
-        kf = KFold(n_splits=5)        
-        
-        #start_time = time.time()
-    
+        kf = KFold(n_splits=10)        
+
         for i, (tran_idx, val_idx) in enumerate(kf.split(X)):
             
             X_train, X_val = X[tran_idx], X[val_idx]
@@ -71,10 +68,7 @@ class SuperLearner(BaseEstimator, RegressorMixin, ClassifierMixin):
             for j, estimator in enumerate(self.base_estimators):
                 estimator.fit(X_train, y_train)
                 meta_predictions[val_idx, j] = estimator.predict(X_val)
-               
-        #end_time =  time.time()
-        
-        #print("Time elapsed: ", end_time - start_time)
+
         self.meta_predictions = meta_predictions
         
         if self.verbose:
@@ -166,7 +160,7 @@ def main():
 
     #X, y = datasets.make_friedman1(5000)
     #X, y = datasets.make_friedman2(5000)
-    X, y, coef = datasets.make_regression(n_samples=5000, n_features=10, n_informative=5, n_targets=1, bias=0.0, effective_rank=None, tail_strength=0.5, noise=0.0, shuffle=True, coef=True, random_state=12)
+    X, y, coef = datasets.make_regression(n_samples=0000, n_features=10, n_informative=5, n_targets=1, bias=0.0, effective_rank=None, tail_strength=0.5, noise=40, shuffle=True, coef=True, random_state=12)
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
     scaler = StandardScaler()
@@ -207,8 +201,18 @@ def main():
         "knn_20": neighbors.KNeighborsRegressor(n_neighbors=20),
     }
         
-    parallel_sl = psl.SuperLearner(library2, meta_learner=linear_model.ElasticNetCV(alphas=np.arange(0.01, 10.0, 0.01), positive=True))
-    sl = SuperLearner(library2, meta_learner=linear_model.ElasticNetCV(alphas=np.arange(0.01, 10.0, 0.01), positive=True))
+    library3 = {
+        "ols": linear_model.LinearRegression(),
+        "elastic_0.1": linear_model.ElasticNet(alpha=0.01),
+        "ridge_0.1": linear_model.Ridge(alpha=0.01),
+        "lasso_0.1": linear_model.Lasso(alpha=0.01),
+        "knn_5": neighbors.KNeighborsRegressor(n_neighbors=5),
+        "knn_10": neighbors.KNeighborsRegressor(n_neighbors=10),
+    }
+        
+    
+    parallel_sl = psl.SuperLearner(library1)
+    sl = SuperLearner(library1)
     start_time = time.time()
     parallel_sl.fit(X_train, y_train)
     end_time = time.time()
