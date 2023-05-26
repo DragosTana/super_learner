@@ -31,12 +31,13 @@ def speedUpVisual():
     
     speeup = times_sl / times_psl
     
-    sample = [100, 500, 1000, 5000, 7500, 10000]
+    sample = [100, 500, 1000, 5000, 7500, 10000, 15000, 20000]
     lib_size = [5, 10, 15, 20, 24]
     
     
-    for l in range(len(lib_size)):
-        plt.plot(sample, speeup[:, l], linewidth = 3, label='{}'.format(lib_size[l]))
+    
+    plt.plot(sample, speeup[:, 1], linewidth = 3, label='{}'.format(lib_size[1]))
+    plt.plot(sample, speeup[:, 4], linewidth = 3, label='{}'.format(lib_size[4]))
     plt.xlabel('Sample Size')
     plt.ylabel("SpeedUp")
     plt.title('Performance Trend: SpeedUp vs Sample Size')
@@ -58,7 +59,8 @@ def weightsVisual(path):
     
 
 if __name__ == "__main__":
-    speedUpVisual()
+    path = "Data/weights_opt_frid.csv"
+    weightsVisual(path)
 
 
     

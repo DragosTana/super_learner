@@ -102,11 +102,11 @@ def montecarloOptimization():
     weigths_meta = []
     scores = []
     sl_scores = []
-    sim = 100
+    sim = 500
     
     for i in tqdm.tqdm(range(sim)):
-        #X, y = datasets.make_friedman1(1000, noise=0.5)
-        X, y = datasets.make_regression(n_samples = 1000, n_features = 20, n_informative=10,  noise = 30)    
+        X, y = datasets.make_friedman1(1000, noise=7)
+        #X, y = datasets.make_regression(n_samples = 1000, n_features = 20, n_informative=10,  noise = 30)    
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
         
         scaler = StandardScaler()
@@ -115,7 +115,7 @@ def montecarloOptimization():
         y_train = scaler.fit_transform(y_train.reshape(-1,1)).flatten()
         y_test = scaler.fit_transform(y_test.reshape(-1,1)).flatten()
         
-        sl1 = sl.SuperLearner(library, meta_learner=linear_model.ElasticNetCV(alphas=np.arange(0.05, 15.0, 0.05)))
+        sl1 = sl.SuperLearner(library, meta_learner=linear_model.RidgeCV(alphas=np.arange(0.05, 15, 0.05)))
         sl2 = sl.SuperLearner(library)
         
         sl1.fit(X_train, y_train)
@@ -142,10 +142,10 @@ def montecarloOptimization():
     pd_score = pd.DataFrame(scores, columns=list(library.keys()))
     pd_sl_score = pd.DataFrame(sl_scores, columns=["meta", "opt"])
     
-    pd_meta.to_csv(path + "/Data/weights_meta.csv", index=False)
-    pd_opt.to_csv(path + "/Data/weights_opt.csv", index=False)
-    pd_score.to_csv(path + "/Data/scores.csv", index=False)
-    pd_sl_score.to_csv(path + "/Data/sl_scores.csv", index=False)
+    pd_meta.to_csv(path + "/Data/weights_meta_frid.csv", index=False)
+    pd_opt.to_csv(path + "/Data/weights_opt_frid.csv", index=False)
+    pd_score.to_csv(path + "/Data/scores.csv_frid", index=False)
+    pd_sl_score.to_csv(path + "/Data/sl_scores_frid.csv", index=False)
     
 def timeTest(type, sample, lib_size):
     
@@ -233,4 +233,4 @@ def speedUp():
     
                     
 if __name__ == "__main__":
-    speedUp()
+    montecarloOptimization()
