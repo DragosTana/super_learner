@@ -2,9 +2,11 @@ import pandas as pd
 import numpy as np
 import misc as ms
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.tri import Triangulation
 from matplotlib.cm import ScalarMappable
+import seaborn as sns
 
 def dataVisualization(estimators, sample_sizes):
 
@@ -12,7 +14,7 @@ def dataVisualization(estimators, sample_sizes):
     
     mean_mses = np.zeros((num_models, len(sample_sizes)))
     for i, sample_size in enumerate(sample_sizes):
-        mse_df = pd.read_csv("Data/R2_at_{}_folds.csv".format(sample_size))
+        mse_df = pd.read_csv("Data/R2_at_{}_lib.csv".format(sample_size))
         mean_mses[:, i] = mse_df.mean()
         
     # Plotting the line plot
@@ -24,7 +26,41 @@ def dataVisualization(estimators, sample_sizes):
     plt.title('Performance Trend: R2 vs Sample Size')
     plt.legend()
     plt.show()
+    
+def boxPlotR2(ml_techniques, sample_sizes):
+    dfs = []
 
+    for sample_size in sample_sizes:
+        file_name = f"Data/R2_at_{sample_size}_folds.csv"
+        df = pd.read_csv(file_name)
+        df['Sample Size'] = sample_size
+        dfs.append(df)
+
+    combined_df = pd.concat(dfs)
+    combined_df = pd.melt(combined_df, id_vars=['Sample Size'], var_name='ML Technique', value_name='R2 Score')
+
+    # Find the ML technique with the highest R2 score for each sample size
+    highest_scores = combined_df.groupby('Sample Size')['R2 Score'].transform('max')
+    combined_df['Highest Score'] = combined_df['R2 Score'] == highest_scores
+
+    palette = sns.color_palette('Set2', n_colors=len(ml_techniques))
+    palette[-1] = 'red'  # Set the last color in the palette to red
+
+    ax = sns.boxplot(data=combined_df, x='Sample Size', y='R2 Score', hue='ML Technique', showfliers=False, palette=palette)
+
+    # Color the boxes with the highest scores in red
+    for patch in ax.artists:
+        # Find the ML technique with the highest score for each patch (box)
+        highest_technique = combined_df.loc[combined_df['ML Technique'] == patch.get_label(), 'Highest Score'].any()
+        if highest_technique:
+            patch.set_facecolor('red')
+
+    plt.xlabel('Sample Size')
+    plt.ylabel('R2 Score')
+    plt.title('Grouped Boxplot of R2 Scores')
+
+    plt.show()
+    
 def speedUpVisual():
     times_psl = np.loadtxt("times_par.csv", delimiter=",")
     times_sl = np.loadtxt("times_seq.csv", delimiter=",")
@@ -58,7 +94,10 @@ def weightsVisual(path):
     plt.show()
 
 if __name__ == "__main__":
-    weightsVisual("Data/R2_at_100_folds.csv")
+    sample_sizes = [100, 200, 500, 1000, 5000, 10000, 15000]
+    columns=["5-fold", "10-fold", "Adaptive"]
+    boxPlotR2(columns, sample_sizes)
+    
     
     
     

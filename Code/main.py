@@ -21,7 +21,7 @@ import superLearner as sl
 def main():
     pass
     
-def montecarloLibrary():
+def montecarloSlvsLib():
     
     path = os.getcwd()
     
@@ -81,8 +81,79 @@ def montecarloLibrary():
     
     print("super learner weights:", sl1.weights)
     
+def montecarloLibrary():
+    path = os.getcwd()
+    # Parameters for the simulation: sim = number of simulations, n = sample size, beta = true coefficients
+    sim = 100
+    beta = np.random.randint(low = -20, high = 20, size = 10)
+    #random set some beta to 0
+    beta = np.where(np.random.randint(low = 0, high = 2, size = 10) == 0, 0, beta)
+    print(beta)
+    sample_sizes = [100, 1000, 5000]
     
-def CrossValidation():
+    library1 = {
+        "ols": linear_model.LinearRegression(),
+        "ridge": linear_model.RidgeCV(alphas=np.arange(0.1, 10, 0.1)),
+        "lasso" : linear_model.LassoCV(alphas=np.arange(0.1, 10.0, 0.1)),
+        "elastic" :  linear_model.ElasticNetCV(alphas=np.arange(0.1, 10.0, 0.1)),
+    }
+    
+    library2 = {
+        "ols": linear_model.LinearRegression(),
+        "ridge_0.1": linear_model.Ridge(alpha=0.1),
+        "ridge_0.5": linear_model.Ridge(alpha=0.5),
+        "ridge_1": linear_model.Ridge(alpha=1),
+        "ridge_2": linear_model.Ridge(alpha=2),
+        "ridge_5": linear_model.Ridge(alpha=5),
+        "ridge_10": linear_model.Ridge(alpha=10),
+        "lasso_0.1": linear_model.Lasso(alpha=0.1),
+        "lasso_0.5": linear_model.Lasso(alpha=0.5),
+        "lasso_1": linear_model.Lasso(alpha=1),
+        "lasso_2": linear_model.Lasso(alpha=2),
+        "lasso_5": linear_model.Lasso(alpha=5),
+        "lasso_10": linear_model.Lasso(alpha=10),
+        "elastic_0.1": linear_model.ElasticNet(alpha=0.1),
+        "elastic_0.5": linear_model.ElasticNet(alpha=0.5),
+        "elastic_1": linear_model.ElasticNet(alpha=1),
+        "elastic_2": linear_model.ElasticNet(alpha=2),
+        "elastic_5": linear_model.ElasticNet(alpha=5),
+        "elastic_10": linear_model.ElasticNet(alpha=10),
+    }
+    
+    error = np.empty((sim, 2))
+    for n in sample_sizes:
+
+        for i in tqdm.tqdm(range(sim), desc="Simulation with {n} samples... ".format(n=n)):
+            X, y = ms.make_regression_fixed_coeffs(n_samples = n, n_features = len(beta), coefficients = beta, noise = 10)
+            #X, y = datasets.make_regression(n_samples = n, n_features = len(beta), noise = 30, random_state=2)
+            #X, y = datasets.make_friedman1(n)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+            
+            scaler = StandardScaler()
+            X_train = scaler.fit_transform(X_train)
+            X_test = scaler.fit_transform(X_test)
+            y_train = scaler.fit_transform(y_train.reshape(-1,1)).flatten()
+            y_test = scaler.fit_transform(y_test.reshape(-1,1)).flatten()
+
+            for estimator in library1:
+                library1[estimator].fit(X_train, y_train)
+                
+            for estimator in library2:
+                library2[estimator].fit(X_train, y_train)
+                
+            sl1 = psl.SuperLearner(library1)
+            sl2 = psl.SuperLearner(library2)
+            
+            sl1.fit(X_train, y_train)
+            sl2.fit(X_train, y_train)
+            
+            error[i, 0] = sl1.score(X_test, y_test)
+            error[i, 1] = sl2.score(X_test, y_test)
+        
+        df = pd.DataFrame(error, columns=["FewOptimized", "LotsNotOptimized"])
+        df.to_csv(path + "/Data/R2_at_{n}_lib.csv".format(n=n), index=False)
+    
+def montecarloFoldNumber():
     
     path = os.getcwd()
     
@@ -113,8 +184,8 @@ def CrossValidation():
     
         for i in tqdm.tqdm(range(sim), desc="Simulation with {n} samples... ".format(n=n)):
             #X, y = ms.make_regression_fixed_coeffs(n_samples = n, n_features = len(beta), coefficients = beta, noise = 10)
-            #X, y = datasets.make_regression(n_samples = n, n_features = len(beta), noise = 30, random_state=2)
-            X, y = datasets.make_friedman1(n)
+            X, y = datasets.make_regression(n_samples = n, n_features = len(beta), noise = 30, random_state=2)
+            #X, y = datasets.make_friedman1(n)
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
             
             scaler = StandardScaler()
@@ -151,11 +222,7 @@ def CrossValidation():
         df = pd.DataFrame(error, columns=["5-fold", "10-fold", "Adaptive"])
         df.to_csv(path + "/Data/R2_at_{n}_folds.csv".format(n=n), index=False)
             
-    
-def montecarloFoldNumber():
-    pass
-    
-    
+      
 def montecarloOptimization():
     
     path = os.getcwd()
@@ -304,4 +371,4 @@ def speedUp():
     
                     
 if __name__ == "__main__":
-    CrossValidation()
+    montecarloLibrary()
