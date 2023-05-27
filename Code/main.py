@@ -48,7 +48,7 @@ def montecarloLibrary():
     # Initialize the error matrix
     error = np.empty((sim, len(library)+1))
     
-    sample_sizes = [100, 200, 500, 1000]
+    sample_sizes = [100, 200, 500, 1000, 5000, 10000, 15000, 20000]
     
     for n in sample_sizes:
     
@@ -80,6 +80,77 @@ def montecarloLibrary():
     print("Done!")
     
     print("super learner weights:", sl1.weights)
+    
+    
+def CrossValidation():
+    
+    path = os.getcwd()
+    
+    # Parameters for the simulation: sim = number of simulations, n = sample size, beta = true coefficients
+    sim = 100
+    beta = np.random.randint(low = -20, high = 20, size = 10)
+    #random set some beta to 0
+    beta = np.where(np.random.randint(low = 0, high = 2, size = 10) == 0, 0, beta)
+    print(beta)
+    
+    # Library of base estimators
+    library = {
+        "ols": linear_model.LinearRegression(),
+        "ridge": linear_model.RidgeCV(alphas=np.arange(0.1, 10, 0.1)),
+        "lasso" : linear_model.LassoCV(alphas=np.arange(0.1, 10.0, 0.1)),
+        "elastic" :  linear_model.ElasticNetCV(alphas=np.arange(0.1, 10.0, 0.1)),
+        "knn_5": neighbors.KNeighborsRegressor(n_neighbors=5),
+        "knn_10": neighbors.KNeighborsRegressor(n_neighbors=10),
+        "knn_15": neighbors.KNeighborsRegressor(n_neighbors=15),
+    }
+    
+    # Initialize the error matrix
+    error = np.empty((sim, 3))
+    
+    sample_sizes = [100, 200, 500, 1000, 5000, 10000, 15000]
+    
+    for n in sample_sizes:
+    
+        for i in tqdm.tqdm(range(sim), desc="Simulation with {n} samples... ".format(n=n)):
+            #X, y = ms.make_regression_fixed_coeffs(n_samples = n, n_features = len(beta), coefficients = beta, noise = 10)
+            #X, y = datasets.make_regression(n_samples = n, n_features = len(beta), noise = 30, random_state=2)
+            X, y = datasets.make_friedman1(n)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+            
+            scaler = StandardScaler()
+            X_train = scaler.fit_transform(X_train)
+            X_test = scaler.fit_transform(X_test)
+            y_train = scaler.fit_transform(y_train.reshape(-1,1)).flatten()
+            y_test = scaler.fit_transform(y_test.reshape(-1,1)).flatten()
+
+            for estimator in library:
+                library[estimator].fit(X_train, y_train)
+
+            sl_5 = psl.SuperLearner(library, folds = 5)
+            sl_10 = psl.SuperLearner(library, folds = 10)
+
+            if n  >= 10000:
+                sl_adaptive = psl.SuperLearner(library, folds = 5)
+            elif n >= 5000:
+                sl_adaptive = psl.SuperLearner(library, folds = 10)
+            elif n >= 1000:
+                sl_adaptive = psl.SuperLearner(library, folds = 20)
+            elif n >= 500:
+                sl_adaptive = psl.SuperLearner(library, folds = 30)
+            elif n >= 30:
+                sl_adaptive = psl.SuperLearner(library, folds = len(X_train))
+        
+            sl_5.fit(X_train, y_train)
+            sl_10.fit(X_train, y_train)
+            sl_adaptive.fit(X_train, y_train)
+            
+            error[i, 0] = sl_5.score(X_test, y_test)
+            error[i, 1] = sl_10.score(X_test, y_test)
+            error[i, 2] = sl_adaptive.score(X_test, y_test)
+        
+        df = pd.DataFrame(error, columns=["5-fold", "10-fold", "Adaptive"])
+        df.to_csv(path + "/Data/R2_at_{n}_folds.csv".format(n=n), index=False)
+            
     
 def montecarloFoldNumber():
     pass
@@ -233,4 +304,4 @@ def speedUp():
     
                     
 if __name__ == "__main__":
-    montecarloOptimization()
+    CrossValidation()
